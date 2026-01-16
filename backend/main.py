@@ -10,31 +10,25 @@ from schemas import ChatRequest, ChatResponse
 from services.llm_service import analyze_message, generate_ai_response
 from services.memory_service import store_memory, retrieve_relevant_memory, decay_memories
 from core.database import get_supabase_client
+from core.config import get_settings
+from core.security import get_current_user
 
 app = FastAPI(title="ROOTED AI - Backend")
 supabase = get_supabase_client()
+settings = get_settings()
+
+# CORS Hardening
+origins = settings.ALLOWED_ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-async def get_current_user(authorization: str = Header(None)):
-    if not authorization:
-         raise HTTPException(status_code=401, detail="Missing Authorization Header")
-    
-    try:
-        token = authorization.replace("Bearer ", "")
-        user_response = supabase.auth.get_user(token)
-        if not user_response.user:
-             raise HTTPException(status_code=401, detail="Invalid User Token")
-        return user_response.user
-    except Exception as e:
-        print(f"Auth Error: {e}")
-        raise HTTPException(status_code=401, detail="Invalid Authentication")
+# User authentication handled by core.security.get_current_user
 
 @app.get("/")
 def health_check():
